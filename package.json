@@ -1,0 +1,15 @@
+{
+  "name": "finance-os-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=finance-os-web",
+    "build": "npm run build --workspace=finance-os-web",
+    "start": "npm run start --workspace=finance-os-web",
+    "lint": "npm run lint --workspace=finance-os-web",
+    "install:web": "npm install --workspace=finance-os-web"
+  }
+}

@@ -1,0 +1,19 @@
+  Ôû▓ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ Ô£ô Compiled successfully
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+unhandledRejection Error [PageNotFoundError]: Cannot find module for page: /_document
+    at getPagePath (C:\APP INVESTIMENTO\apps\web\node_modules\next\dist\server\require.js:94:15)
+    at requirePage (C:\APP INVESTIMENTO\apps\web\node_modules\next\dist\server\require.js:99:22)
+    at C:\APP INVESTIMENTO\apps\web\node_modules\next\dist\server\load-components.js:72:65
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async Promise.all (index 0)
+    at async loadComponentsImpl (C:\APP INVESTIMENTO\apps\web\node_modules\next\dist\server\load-components.js:71:33)
+    at async Object.getDefinedNamedExports (C:\APP INVESTIMENTO\apps\web\node_modules\next\dist\build\utils.js:1291:24) {
+  type: 'PageNotFoundError',
+  code: 'ENOENT'
+}

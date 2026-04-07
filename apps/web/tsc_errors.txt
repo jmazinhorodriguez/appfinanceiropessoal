@@ -1,0 +1,42 @@
+app/(dashboard)/imposto-renda/components/TaxAssetTable.tsx(5,10): error TS2305: Module '"@/lib/ai/tax-calculator"' has no exported member 'TaxAsset'.
+app/(dashboard)/investimentos/page.tsx(77,74): error TS2304: Cannot find name 'formatUSD'.
+app/(dashboard)/investimentos/page.tsx(78,74): error TS2304: Cannot find name 'formatUSD'.
+app/(dashboard)/investimentos/page.tsx(79,91): error TS2304: Cannot find name 'formatUSD'.
+app/(dashboard)/investimentos/page.tsx(83,43): error TS2304: Cannot find name 'formatUSD'.
+app/api/ai/categorize/route.ts(2,10): error TS2459: Module '"@/lib/parsers/statement-parser"' declares 'categorize' locally, but it is not exported.
+app/api/ai/categorize/route.ts(23,37): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/layout.tsx(5,10): error TS2305: Module '"@/lib/supabase/client"' has no exported member 'createClient'.
+app/dashboard/page.tsx(4,10): error TS2305: Module '"@/lib/supabase/client"' has no exported member 'createClient'.
+app/dashboard/page.tsx(65,48): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+app/dashboard/page.tsx(65,53): error TS7006: Parameter 'c' implicitly has an 'any' type.
+app/dashboard/page.tsx(80,15): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/page.tsx(81,16): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+app/dashboard/page.tsx(81,21): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/page.tsx(84,15): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/page.tsx(85,16): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+app/dashboard/page.tsx(85,21): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/page.tsx(126,40): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/page.tsx(126,75): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/dashboard/page.tsx(126,78): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/page.tsx(127,41): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/page.tsx(127,76): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/dashboard/page.tsx(127,79): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/page.tsx(173,56): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+app/dashboard/page.tsx(173,61): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/dashboard/page.tsx(525,40): error TS7006: Parameter 'c' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(4,10): error TS2305: Module '"@/lib/supabase/client"' has no exported member 'createClient'.
+app/dashboard/saude/page.tsx(101,46): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(101,81): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(101,84): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(102,46): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(102,81): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(102,84): error TS7006: Parameter 't' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(106,54): error TS7006: Parameter 'c' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(106,76): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(106,79): error TS7006: Parameter 'c' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(108,56): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/dashboard/saude/page.tsx(108,59): error TS7006: Parameter 'at' implicitly has an 'any' type.
+lib/parsers/statement-parser.ts(48,3): error TS2322: Type '{ date: string; description: string; amount: number; type: string; category: string; }[]' is not assignable to type 'ParsedTransaction[]'.
+  Type '{ date: string; description: string; amount: number; type: string; category: string; }' is not assignable to type 'ParsedTransaction'.
+    Types of property 'type' are incompatible.
+      Type 'string' is not assignable to type '"receita" | "despesa"'.
