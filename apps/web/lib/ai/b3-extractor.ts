@@ -19,9 +19,11 @@ export async function parseB3WithAI(text: string): Promise<B3ExtractionResult> {
   try {
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
-      console.warn("No GEMINI key, skipping AI extraction.");
+      console.warn("[AI_EXTRACTOR] No GEMINI key found in process.env.");
       return { trades: [], proventos: [] };
     }
+
+    console.log(`[AI_EXTRACTOR] Using API Key: ${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}`);
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -29,40 +31,30 @@ export async function parseB3WithAI(text: string): Promise<B3ExtractionResult> {
     console.log(`[AI_EXTRACTOR] Sending text to Gemini (Length: ${text.length})...`);
 
     const prompt = `
-Você é um especialista financeiro brasileiro.
-Sua missão é ler o texto abaixo (que pode ser um PDF de nota de corretagem, um CSV de extrato bancário ou uma planilha de proventos) e extrair:
-1. Operações de COMPRA e VENDA de ativos (ações, FIIs, ETFs, BDRs).
-2. Proventos (Dividendos, JCP, Rendimentos, Bonificações, Rentabilidade de Investimentos).
+Você é um especialista financeiro brasileiro trabalhando no sistema FinanceOS.
+Sua missão é extrair dados de investimentos de textos brutos (PDF, CSV, Excel).
 
-REGRAS DE EXTRAÇÃO:
-- Tickers: Identifique tickers da B3 (ex: PETR4, SOJA3, KLBN11). Se o texto disser "BOA SAFRA SEMENTES", o ticker é "SOJA3".
-- Datas: Converta para o formato ISO YYYY-MM-DD.
-- Valores: Garanta que centavos sejam tratados corretamente (use ponto para decimais no JSON).
-- Proventos de Extrato: Se encontrar linhas como "RENTAB.INVEST FACILCRED" ou "DIVIDENDO", extraia como provento.
+FORMATO IDENTIFICADO NESTA SESSÃO:
+O texto pode conter cabeçalhos como: "Entrada/Saída", "Movimentação", "Produto", "Quantidade", "Preço unitário", "Valor da Operação".
 
-Responda APENAS com um objeto JSON válido:
+REGRAS DE OURO:
+1. Tickers: Se o texto contiver "SOJA3 - BOA SAFRA", extraia "SOJA3". Se for "CSMG3 - COPASA", extraia "CSMG3".
+2. Datas: O texto virá como DD/MM/YYYY. Converta para ISO YYYY-MM-DD.
+3. Tipos de Proventos: Mapeie de "Movimentação" para os tipos: "Dividendo", "Juros Sobre Capital Próprio", "Rendimento", "Rentabilidade".
+4. Valores: "Valor da Operação" é o valor total líquido que deve ir para "valor_liquido".
+5. Trades: Se houver "Compra" ou "Venda", extraia para o array "trades".
+
+Responda EXCLUSIVAMENTE com o JSON abaixo:
 {
-  "trades": [
-    {
-      "date": "YYYY-MM-DD",
-      "ticker": "string",
-      "type": "compra" ou "venda",
-      "quantity": 100,
-      "unit_price": 15.42,
-      "total_value": 1542.00,
-      "fees": 0,
-      "net_value": 1542.00,
-      "market": "NORMAL"
-    }
-  ],
+  "trades": [],
   "proventos": [
     {
       "data": "YYYY-MM-DD",
       "ticker": "string",
-      "tipo": "string (ex: Dividendo, Juros Sobre Capital Próprio, Rendimento, Rentabilidade)",
-      "quantidade_custodia": 0,
-      "valor_por_cota": 0,
-      "valor_liquido": 15.00
+      "tipo": "string",
+      "quantidade_custodia": number,
+      "valor_por_cota": number,
+      "valor_liquido": number
     }
   ]
 }

@@ -17,8 +17,18 @@ export interface B3Trade {
   broker_note_number?: string;
 }
 
+export interface B3Provento {
+  data: string;
+  ticker: string;
+  tipo: string;
+  quantidade_custodia: number;
+  valor_por_cota: number;
+  valor_liquido: number;
+}
+
 export interface B3ParseResult {
   trades: B3Trade[];
+  proventos: B3Provento[];
   total_buys: number;
   total_sells: number;
   net_value: number;
@@ -80,6 +90,7 @@ function inferMarket(ticker: string): B3Trade['market'] {
 export function parseB3File(content: string): B3ParseResult {
   const result: B3ParseResult = {
     trades: [],
+    proventos: [],
     total_buys: 0,
     total_sells: 0,
     net_value: 0,
@@ -97,7 +108,11 @@ export function parseB3File(content: string): B3ParseResult {
     .map(l => l.trim())
     .filter(l => l.length > 0);
 
-  // Detectar formato (XP/Rico, BTG, Nu Invest, genérico)
+  // Parser de Proventos (Foco no formato Inter/B3 Excel)
+  const proventos = parseProventosInter(lines);
+  result.proventos = proventos;
+
+  // Detectar formato de trades (XP/Rico, BTG, Nu Invest, genérico)
   const formato = detectFormat(content);
 
   const parseFn = {
@@ -396,4 +411,46 @@ export function b3TradesToTransactions(
     unit_price: t.unit_price,
     fees: t.fees,
   }));
+}
+
+/**
+ * Parser específico para o formato tabular do Banco Inter / B3 (Proventos)
+ */
+function parseProventosInter(lines: string[]): B3Provento[] {
+  const proventos: B3Provento[] = [];
+  
+  for (const line of lines) {
+    // Regex para capturar data, tipo e o bloco "Ticker - Nome"
+    // Ex: 30/12/2025 | Juros Sobre Capital Próprio | SOJA3 - BOA SAFRA
+    const match = line.match(/(\d{2}\/\d{2}\/\d{4})\s*\|\s*([^|]+)\s*\|\s*([A-Z0-9]{4,6})\s*-\s*([^|]+)\s*\|\s*[^|]+\|\s*([\d.,]+)\s*\|\s*([\d.,]+)\s*\|\s*([\d.,]+)/i);
+    
+    if (match) {
+      const [, date, type, ticker, , qty, unitPrice, total] = match;
+      proventos.push({
+        data: formatDate(date),
+        ticker: ticker.toUpperCase(),
+        tipo: type.trim(),
+        quantidade_custodia: parseBRNumber(qty),
+        valor_por_cota: parseBRNumber(unitPrice),
+        valor_liquido: parseBRNumber(total)
+      });
+      continue;
+    }
+
+    // Fallback: se o Ticker não estiver seguido de hífem (ex: apenas o Ticker em uma coluna)
+    const matchSimple = line.match(/(\d{2}\/\d{2}\/\d{4})\s*\|\s*([^|]+)\s*\|\s*([A-Z0-9]{4,6})\s*\|\s*[^|]+\|\s*([\d.,]+)\s*\|\s*([\d.,]+)\s*\|\s*([\d.,]+)/i);
+    if (matchSimple) {
+      const [, date, type, ticker, qty, unitPrice, total] = matchSimple;
+       proventos.push({
+        data: formatDate(date),
+        ticker: ticker.toUpperCase(),
+        tipo: type.trim(),
+        quantidade_custodia: parseBRNumber(qty),
+        valor_por_cota: parseBRNumber(unitPrice),
+        valor_liquido: parseBRNumber(total)
+      });
+    }
+  }
+  
+  return proventos;
 }

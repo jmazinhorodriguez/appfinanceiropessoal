@@ -92,9 +92,14 @@ export async function POST(request: NextRequest) {
     const proventos = (result as any).proventos || (aiExtractions ? aiExtractions.proventos : []);
 
     if (result.errors.length > 0 && trades.length === 0 && proventos.length === 0) {
+      let msg = 'Não foi possível ler as notas de corretagem. Verifique se é um formato suportado.';
+      if (aiExtractions && aiExtractions.trades.length === 0 && aiExtractions.proventos.length === 0) {
+        msg = 'O arquivo foi lido, mas a Inteligência Artificial não encontrou ordens ou proventos nele.';
+      }
+
       return NextResponse.json({ 
-        error: 'Não foi possível ler as notas de corretagem. Verifique se é um formato suportado.',
-        debug_info: contentStr.substring(0, 500) // Enviando os primeiros 500 caracteres para diagnóstico
+        error: msg,
+        debug_info: contentStr.substring(0, 500)
       }, { status: 400 });
     }
 
