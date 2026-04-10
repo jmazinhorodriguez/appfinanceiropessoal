@@ -1,9 +1,15 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { B3Trade } from '../parsers/b3-parser';
 
 export async function parseB3WithAI(text: string): Promise<B3Trade[]> {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      console.warn("No GEMINI key, skipping AI extraction.");
+      return [];
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `
 Você é um especialista em extração de notas de corretagem (B3).
@@ -23,23 +29,17 @@ Responda APENAS com um JSON Array válido, onde cada objeto tem o seguinte forma
 
 Regras:
 1. Ignore linhas que não sejam operações claras (rendimentos, saldos, cabeçalhos, IRRF, etc).
-2. Tickers geralmente têm 4 letras e 1 ou 2 números (ex: WEGE3, BBDC4, TAEE11, XPML11).
+2. Tickers geralmente têm 4 a 6 letras e 1 ou 2 números (ex: WEGE3, BBDC4, TAEE11, XPML11).
 3. ATENÇÃO: Retorne APENAS o JSON Array. Sem marcações markdown \`\`\`json ou texto adicional. Valide o JSON antes de retornar.
 
 Texto da nota:
 ${text.substring(0, 15000)} // limite de segurança
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        temperature: 0.1,
-      }
-    });
-
-    let rawText = response.text || '[]';
-    rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const result = await model.generateContent(prompt);
+    let rawText = result.response.text().trim();
+    
+    rawText = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();
     
     const trades: B3Trade[] = JSON.parse(rawText);
     return Array.isArray(trades) ? trades : [];
