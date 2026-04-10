@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
         storage_path: storagePath,
         statement_upload_id: uploadRecord.id,
         file_type: file.type,
+        gemini_api_key: process.env.GEMINI_API_KEY,
       },
     });
 
