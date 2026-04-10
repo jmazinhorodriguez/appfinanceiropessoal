@@ -118,8 +118,10 @@ async function parsePDFContent(buffer: Buffer): Promise<ParsedTransaction[]> {
   const lines = data.text.split('\n');
   const txs: ParsedTransaction[] = [];
 
-  // Regex: DD/MM/YYYY  descrição  valor (com ou sem sinal)
-  const lineRegex = /^(\d{2}\/\d{2}\/\d{4}|\d{2}\/\d{2})\s+(.+?)\s+(-?[\d]{1,3}(?:\.[\d]{3})*,\d{2})/;
+  // Match: "12/03" or "12/03/2024" or "12 MAR"
+  // Followed by description
+  // Followed by value like "-15,00", "15,00 D", "1.000,00", "R$ 15,00"
+  const lineRegex = /^\s*(\d{2}\/\d{2}(?:\/\d{4})?|\d{2}\s+[a-zA-Z]{3})\s+(.+?)\s+((?:R\$)?\s?-?[\d]{1,3}(?:\.[\d]{3})*,\d{2}(?:\s*[CD\-])?)/i;
 
   for (const line of lines) {
     const m = line.match(lineRegex);
@@ -127,14 +129,23 @@ async function parsePDFContent(buffer: Buffer): Promise<ParsedTransaction[]> {
 
     const dateStr = m[1];
     const desc    = m[2].trim();
-    const valStr  = m[3];
-    const amount  = parseFloat(valStr.replace(/\./g, '').replace(',', '.'));
+    const valRaw  = m[3].replace(/R\$\s?/gi, '').trim();
+    
+    // Check if debit
+    let isNegative = valRaw.includes('-') || valRaw.toUpperCase().endsWith('D');
+    // If it explicitly ends with 'C', it's a credit, otherwise assume credit if no minus/D
+    let cleanVal = valRaw.replace(/[CD\-]/gi, '').trim();
+    
+    const amount  = parseFloat(cleanVal.replace(/\./g, '').replace(',', '.'));
+    if (isNaN(amount)) continue;
+    
+    const finalAmount = isNegative ? -amount : amount;
 
     txs.push({
       date:        formatDateString(dateStr),
       description: desc,
       amount:      Math.abs(amount),
-      type:        amount >= 0 ? 'receita' : 'despesa',
+      type:        finalAmount >= 0 ? 'receita' : 'despesa',
       category:    'Outros',
     });
   }
@@ -148,6 +159,18 @@ function formatDateString(dateStr: string): string {
 
   const dd_mm_yy = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
   if (dd_mm_yy) return `20${dd_mm_yy[3]}-${dd_mm_yy[2]}-${dd_mm_yy[1]}`;
+
+  const dd_mm = dateStr.match(/^(\d{2})\/(\d{2})$/);
+  if (dd_mm) {
+     return `${new Date().getFullYear()}-${dd_mm[2]}-${dd_mm[1]}`;
+  }
+
+  const months: Record<string, string> = { jan:'01', fev:'02', mar:'03', abr:'04', mai:'05', jun:'06', jul:'07', ago:'08', set:'09', out:'10', nov:'11', dez:'12' };
+  const d_MMM = dateStr.toLowerCase().match(/^(\d{2})\s+([a-z]{3})$/);
+  if (d_MMM) {
+    const mm = months[d_MMM[2]] || '01';
+    return `${new Date().getFullYear()}-${mm}-${d_MMM[1]}`;
+  }
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
 
