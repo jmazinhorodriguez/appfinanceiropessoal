@@ -47,7 +47,18 @@ export async function POST(request: NextRequest) {
       console.log(`[UPLOAD_API] XLSX converted to string. Preview (100 chars): ${contentStr.substring(0, 100)}`);
     } else if (fileType === 'csv') {
       console.log(`[UPLOAD_API] Parsing CSV...`);
-      const rawBody = buffer.toString('utf-8');
+      let rawBody = '';
+      try {
+        rawBody = buffer.toString('utf-8');
+        // Heurística simples: se contiver caracteres "quebrados" (como o diamante com interrogação), tenta latin1
+        if (rawBody.includes('')) {
+          console.log('[UPLOAD_API] detected corrupted chars, trying ISO-8859-1 (Latin1)...');
+          rawBody = buffer.toString('latin1');
+        }
+      } catch (e) {
+        rawBody = buffer.toString('latin1');
+      }
+
       const records = parseCSV(rawBody, { 
         skip_empty_lines: true,
         relax_column_count: true,
@@ -56,21 +67,19 @@ export async function POST(request: NextRequest) {
         delimiter: [',', ';', '\t']
       }) as any[][];
       contentStr = records.map(r => r.join(' | ')).join('\n');
-      console.log(`[UPLOAD_API] CSV converted to string. Preview (100 chars): ${contentStr.substring(0, 100)}`);
+      console.log(`[UPLOAD_API] CSV converted. Preview: ${contentStr.substring(0, 100)}`);
     } else {
       contentStr = buffer.toString('utf-8');
     }
 
     let result = parseB3File(contentStr);
-    console.log(`[UPLOAD_API] Heuristic parser found ${result.trades.length} trades.`);
+    console.log(`[UPLOAD_API] Heuristic found ${result.trades.length} trades.`);
 
-    // Fallback absoluto: Se a heurística e as regexes falharem (layout exótico) ou se quiser achar proventos.
     let aiExtractions: any = null;
     if (result.trades.length === 0) {
-       console.log('[UPLOAD_API] Falling back to Gemini AI for extraction...');
+       console.log('[UPLOAD_API] Calling AI fallback...');
        const aiResult = await parseB3WithAI(contentStr);
        aiExtractions = aiResult;
-       console.log(`[UPLOAD_API] AI found ${aiResult.trades?.length || 0} trades and ${aiResult.proventos?.length || 0} proventos.`);
        
        if ((aiResult.trades && aiResult.trades.length > 0) || (aiResult.proventos && aiResult.proventos.length > 0)) {
          result.trades = aiResult.trades || [];
@@ -84,7 +93,8 @@ export async function POST(request: NextRequest) {
 
     if (result.errors.length > 0 && trades.length === 0 && proventos.length === 0) {
       return NextResponse.json({ 
-        error: 'Não foi possível ler as notas de corretagem. Verifique se é um formato suportado.' 
+        error: 'Não foi possível ler as notas de corretagem. Verifique se é um formato suportado.',
+        debug_info: contentStr.substring(0, 500) // Enviando os primeiros 500 caracteres para diagnóstico
       }, { status: 400 });
     }
 

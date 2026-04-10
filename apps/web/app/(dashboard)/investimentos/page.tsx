@@ -42,10 +42,16 @@ export default function InvestimentosPage() {
       });
       
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        if (data.debug_info) {
+          (window as any)._debugInfo = data.debug_info;
+        }
+        throw new Error(data.error);
+      }
 
       setStatus('done');
       setImportedCount(data.count);
+      (window as any)._debugInfo = null;
 
     } catch (e: any) {
       setStatus('error');
@@ -366,7 +372,18 @@ export default function InvestimentosPage() {
                   <XCircle size={48} color="var(--accent-red)" style={{ margin: '0 auto 20px', display: 'block' }} />
                   <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--accent-red)', marginBottom: 8 }}>Erro de Extração</h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{errorMsg}</p>
-                  <button onClick={(e) => { e.stopPropagation(); setStatus('idle'); }} className="btn-glass" style={{ marginTop: 24 }}>Tentar Novamente</button>
+                  
+                  {(window as any)._debugInfo && (
+                    <div style={{ marginTop: 16, textAlign: 'left', background: 'rgba(0,0,0,0.3)', padding: 12, borderRadius: 8, fontSize: 10, fontFamily: 'monospace', maxHeight: 150, overflowY: 'auto', border: '1px solid var(--border-subtle)' }}>
+                      <p style={{ color: 'var(--accent-blue)', marginBottom: 4 }}>Debug Info (Server Raw Data):</p>
+                      {(window as any)._debugInfo}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
+                    <button onClick={(e) => { e.stopPropagation(); setStatus('idle'); }} className="btn-primary" style={{ minWidth: 120 }}>Tentar Novamente</button>
+                    <button onClick={(e) => { e.stopPropagation(); console.log((window as any)._debugInfo); alert('Logs copiados para o console (F12)'); }} className="btn-glass">Ver Logs (F12)</button>
+                  </div>
                 </div>
               )}
             </div>
