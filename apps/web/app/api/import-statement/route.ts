@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { v4 as uuidv4 } from 'uuid';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req: NextRequest) {
@@ -26,7 +25,7 @@ export async function POST(req: NextRequest) {
   }
 
   const fileExtension = file.name.split('.').pop();
-  const fileName = `${uuidv4()}.${fileExtension}`;
+  const fileName = `${crypto.randomUUID()}.${fileExtension}`;
   const storagePath = `${user.id}/${fileName}`;
 
   try {
@@ -83,8 +82,9 @@ export async function POST(req: NextRequest) {
       uploadId: uploadRecord.id,
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Import statement API error:', error);
-    return NextResponse.json({ error: error.message || 'An unknown error occurred during import.' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred during import.';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

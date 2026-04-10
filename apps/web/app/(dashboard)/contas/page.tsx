@@ -46,7 +46,7 @@ export default function ContasPage() {
       } else {
         setTimeout(() => checkStatus(id, attempts + 1), 2000);
       }
-    } catch (e) {
+    } catch {
       setTimeout(() => checkStatus(id, attempts + 1), 2000);
     }
   }, []);
@@ -76,9 +76,9 @@ export default function ContasPage() {
       setUploadId(data.uploadId);
       checkStatus(data.uploadId);
 
-    } catch (e: any) {
+    } catch (e: unknown) {
       setStatus('error');
-      setErrorMsg(e.message);
+      setErrorMsg(e instanceof Error ? e.message : 'Unknown error');
     }
   }, [checkStatus]);
 
