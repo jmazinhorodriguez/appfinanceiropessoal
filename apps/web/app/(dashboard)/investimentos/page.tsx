@@ -22,7 +22,7 @@ export default function InvestimentosPage() {
   ];
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }} className="animate-fade-in">
+    <div style={{ padding: 'clamp(16px, 4vw, 32px) clamp(16px, 5vw, 40px)', maxWidth: 1200, margin: '0 auto' }} className="animate-fade-in">
       <div style={{ display: 'flex', gap: 32, borderBottom: '1px solid var(--border-subtle)', marginBottom: 32 }}>
         {['Carteira', 'Nova Ordem', 'Proventos', 'Histórico'].map((tab) => (
           <button 
@@ -110,11 +110,11 @@ export default function InvestimentosPage() {
       )}
 
       {activeTab === 'nova-ordem' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(400px, 1fr) 1fr', gap: 32 }} className="animate-fade-in">
+        <div className="grid-cols-2 animate-fade-in" style={{ gap: 32 }}>
           <div className="lg-card" style={{ padding: 32 }}>
             <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 24 }}>Registrar Operação</h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div className="grid-cols-2" style={{ gap: 16, marginBottom: 16 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>Ticker</label>
                 <input type="text" className="input-glass" placeholder="Ex: BBDC4" />
@@ -125,7 +125,7 @@ export default function InvestimentosPage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div className="grid-cols-2" style={{ gap: 16, marginBottom: 16 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>Operação</label>
                 <select className="input-glass" style={{ appearance: 'none' }}>
@@ -142,7 +142,7 @@ export default function InvestimentosPage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+            <div className="grid-cols-2" style={{ gap: 16, marginBottom: 24 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>Quantidade</label>
                 <input type="number" className="input-glass" placeholder="0" />

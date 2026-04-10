@@ -6,7 +6,9 @@ type Props = {
   data: { month: string; receitas: number; despesas: number; }[];
 };
 
-export function CashFlowChart({ data }: Props) {
+import { memo } from 'react';
+
+export const CashFlowChart = memo(function CashFlowChart({ data }: Props) {
   return (
     <div style={{ width: '100%', height: 260 }}>
       <ResponsiveContainer>
@@ -55,4 +57,4 @@ export function CashFlowChart({ data }: Props) {
       </ResponsiveContainer>
     </div>
   );
-}
+});

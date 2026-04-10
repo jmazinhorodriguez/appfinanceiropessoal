@@ -80,7 +80,7 @@ export default function SaudeFinanceiraPage() {
   );
 
   return (
-    <div style={{ padding:'28px 32px', maxWidth:1280, margin:'0 auto' }}>
+    <div style={{ padding:'clamp(16px, 4vw, 28px) clamp(16px, 5vw, 32px)', maxWidth:1280, margin:'0 auto' }}>
       {/* HEADER */}
       <div style={{ ...glass, padding:'28px 32px', marginBottom:24, background:'rgba(10,132,255,0.08)', border:'1px solid rgba(10,132,255,0.18)', boxShadow:`0 8px 40px ${lc.glow}` }}>
         <div style={prismLine} />

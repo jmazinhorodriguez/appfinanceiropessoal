@@ -19,7 +19,7 @@ export default function ImpostoRendaPage() {
   ];
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }} className="animate-fade-in">
+    <div style={{ padding: 'clamp(16px, 4vw, 32px) clamp(16px, 5vw, 40px)', maxWidth: 1200, margin: '0 auto' }} className="animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
         <div style={{ display: 'flex', gap: 32, borderBottom: '1px solid var(--border-subtle)' }}>
           {['Apuração Mensal', 'Declaração Anual', 'Bens e Direitos'].map((tab) => {
@@ -59,7 +59,7 @@ export default function ImpostoRendaPage() {
       {activeTab === 'apuracao-mensal' && (
         <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }} className="animate-fade-in">
           
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div style={{ flex: 1 }} className="grid-cols-4">
             {months.map((m, i) => {
                const data = taxData.find(d => d.month === i) || { status: 'isento', value: 0 };
                const isActive = selectedMonth === i;

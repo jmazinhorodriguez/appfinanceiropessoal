@@ -19,11 +19,25 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single<Profile>();
 
-  // Basic stats fallback
-  const totalBalance = 25430.50;
-  const moIncome = 12400;
-  const moExpense = 4320;
-  const portfolioValue = 84500;
+  // Real data fetching
+  const { data: accounts } = await supabase.from('bank_accounts').select('balance').eq('user_id', user.id);
+  const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.balance || 0), 0) || 0;
+
+  const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const { data: currentMonthTxs } = await supabase.from('transactions')
+    .select('amount, type')
+    .eq('user_id', user.id)
+    .gte('date', firstDayOfMonth);
+
+  let moIncome = 0;
+  let moExpense = 0;
+  currentMonthTxs?.forEach(tx => {
+    if (tx.type === 'receita') moIncome += Number(tx.amount);
+    if (tx.type === 'despesa') moExpense += Math.abs(Number(tx.amount));
+  });
+
+  const { data: assets } = await supabase.from('portfolio_assets').select('quantity, current_price, avg_price').eq('user_id', user.id);
+  const portfolioValue = assets?.reduce((sum, a) => sum + (Number(a.quantity) * Number(a.current_price || a.avg_price || 0)), 0) || 0;
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -34,31 +48,53 @@ export default async function DashboardPage() {
 
   const name = profile?.full_name?.split(' ')[0] || 'Investidor';
   
-  // Dummy data for cash flow
-  const cashFlowData = [
-    { month: 'Out', receitas: 11000, despesas: 5200 },
-    { month: 'Nov', receitas: 11500, despesas: 4800 },
-    { month: 'Dez', receitas: 18000, despesas: 8500 },
-    { month: 'Jan', receitas: 12000, despesas: 4100 },
-    { month: 'Fev', receitas: 12200, despesas: 3900 },
-    { month: 'Mar', receitas: 12400, despesas: 4320 },
-  ];
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1);
 
-  // Dummy recent history
-  const recentTxs: Partial<Transaction>[] = [
-    { id: '1', description: 'Salário', category: 'Renda', amount: 12400, type: 'receita', date: '2025-03-05' },
-    { id: '2', description: 'Aluguel', category: 'Moradia', amount: -2500, type: 'despesa', date: '2025-03-10' },
-    { id: '3', description: 'Supermercado', category: 'Alimentação', amount: -850, type: 'despesa', date: '2025-03-12' },
-    { id: '4', description: 'Dividendos US', category: 'Proventos', amount: 340, type: 'receita', date: '2025-03-15' },
-    { id: '5', description: 'Energia', category: 'Moradia', amount: -180, type: 'despesa', date: '2025-03-18' },
-    { id: '6', description: 'Restaurante', category: 'Alimentação', amount: -220, type: 'despesa', date: '2025-03-20' },
-  ];
+  const { data: last6moTxs } = await supabase.from('transactions')
+    .select('amount, type, date')
+    .eq('user_id', user.id)
+    .gte('date', sixMonthsAgo.toISOString());
+
+  const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const flowMap: Record<string, { receitas: number, despesas: number }> = {};
+
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const mKey = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().substring(2)}`;
+    flowMap[mKey] = { receitas: 0, despesas: 0 };
+  }
+
+  last6moTxs?.forEach(tx => {
+    const d = new Date(tx.date);
+    const mKey = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().substring(2)}`;
+    if (flowMap[mKey]) {
+      if (tx.type === 'receita') flowMap[mKey].receitas += Number(tx.amount);
+      if (tx.type === 'despesa') flowMap[mKey].despesas += Math.abs(Number(tx.amount));
+    }
+  });
+
+  const cashFlowData = Object.keys(flowMap).map(k => ({
+    month: k.split(' ')[0],
+    receitas: flowMap[k].receitas,
+    despesas: flowMap[k].despesas
+  }));
+
+  const { data: dbRecentTxs } = await supabase.from('transactions')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('date', { ascending: false })
+    .limit(6);
+
+  const recentTxs: Partial<Transaction>[] = dbRecentTxs || [];
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1440, margin: '0 auto' }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 32px) clamp(16px, 5vw, 40px)', maxWidth: 1440, margin: '0 auto' }}>
       
       {/* HERO */}
-      <div className="lg-card animate-fade-in" style={{ padding: '32px 40px', marginBottom: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden' }}>
+      <div className="lg-card animate-fade-in hero-container" style={{ padding: 'clamp(20px, 4vw, 32px) clamp(20px, 5vw, 40px)', marginBottom: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', right: -100, top: -100, width: 400, height: 400, background: 'radial-gradient(circle, rgba(10,132,255,0.08) 0%, transparent 60%)', borderRadius: '50%', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -75,14 +111,14 @@ export default async function DashboardPage() {
       </div>
 
       {/* METRICS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, marginBottom: 32 }}>
+      <div className="grid-cols-4" style={{ marginBottom: 32 }}>
         <MetricCard title="Saldo em Contas" value={totalBalance} color="blue" icon="wallet" delay={0} change={3.4} />
         <MetricCard title="Receitas do Mês" value={moIncome} color="green" icon="trending-up" delay={100} />
         <MetricCard title="Despesas do Mês" value={moExpense} color="red" icon="trending-down" delay={200} />
         <MetricCard title="Carteira B3/US" value={portfolioValue} color="violet" icon="pie-chart" delay={300} change={1.2} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '8fr 4fr', gap: 24, marginBottom: 32 }}>
+      <div className="grid-layout-main" style={{ marginBottom: 32 }}>
         {/* CHART */}
         <div className="lg-card animate-fade-up" style={{ padding: '24px 32px', animationDelay: '400ms' }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 24 }}>Fluxo de Caixa (6 meses)</h3>
@@ -124,7 +160,7 @@ export default async function DashboardPage() {
 
       {/* QUICK ACTIONS */}
       <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 20 }}>Ações Rápidas</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+      <div className="grid-cols-4" style={{ marginBottom: 32 }}>
         {[
           { title: 'Importar Extrato', icon: Upload, path: '/contas' },
           { title: 'Nova Transferência', icon: ArrowRightLeft, path: '#' },

@@ -15,7 +15,9 @@ const DEFAULT_COLORS = [
   'rgba(255,69,58,1)',  // red
 ];
 
-export function DonutChart({ data }: Props) {
+import { memo } from 'react';
+
+export const DonutChart = memo(function DonutChart({ data }: Props) {
   return (
     <div style={{ width: '100%', height: 260 }}>
       <ResponsiveContainer>
@@ -54,4 +56,4 @@ export function DonutChart({ data }: Props) {
       </ResponsiveContainer>
     </div>
   );
-}
+});

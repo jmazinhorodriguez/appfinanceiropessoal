@@ -83,7 +83,7 @@ export default function ContasPage() {
   const bancos = ['Nubank', 'Itaú', 'Bradesco', 'Santander', 'Caixa', 'Banco do Brasil', 'Inter', 'C6', 'BTG', 'XP', 'Avenue', 'Wise'];
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1000, margin: '0 auto' }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 32px) clamp(16px, 5vw, 40px)', maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ display: 'flex', gap: 32, borderBottom: '1px solid var(--border-subtle)', marginBottom: 32 }}>
         {['Visão Geral', 'Transações', 'Importar Extrato'].map((tab) => (
           <button 

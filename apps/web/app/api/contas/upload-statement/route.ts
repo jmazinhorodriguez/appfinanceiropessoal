@@ -45,8 +45,8 @@ export async function POST(req: NextRequest) {
 
     if (dbError) throw dbError;
 
-    // Process asynchronously (do not await)
-    processAsync(record.id, user.id, file, fileType, accountId);
+    // Process synchronously since this is serverless
+    await processAsync(record.id, user.id, file, fileType, accountId);
 
     return NextResponse.json({ uploadId: record.id });
   } catch (error: any) {
