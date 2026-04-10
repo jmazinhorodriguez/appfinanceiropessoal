@@ -112,6 +112,8 @@ body > * { position: relative; z-index: 1; }
 }
 
 .lg-card {
+  position: relative;
+  overflow: hidden;
   background: var(--glass-regular);
   backdrop-filter: var(--blur-regular);
   -webkit-backdrop-filter: var(--blur-regular);
@@ -125,20 +127,44 @@ body > * { position: relative; z-index: 1; }
     transform var(--duration-base) var(--ease-spring);
 }
 
+.lg-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  pointer-events: none;
+}
+
 .lg-card:hover {
   background: var(--glass-thick);
   border-color: var(--border-strong);
   box-shadow: var(--shadow-lg);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .lg-card-elevated {
+  position: relative;
+  overflow: hidden;
   background: var(--glass-thick);
   backdrop-filter: var(--blur-thick);
   -webkit-backdrop-filter: var(--blur-thick);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+}
+
+.lg-card-elevated::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.30), transparent);
+  pointer-events: none;
 }
 
 /* Efeito cromado (barras de navegação, sidebars) */
@@ -149,7 +175,7 @@ body > * { position: relative; z-index: 1; }
   border: 1px solid var(--border-strong);
 }
 
-/* Realce de borda interna — efeito prisma */
+/* Realce de borda interna — efeito prisma total */
 .lg-prism {
   position: relative;
 }
@@ -168,6 +194,22 @@ body > * { position: relative; z-index: 1; }
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Realce superior simples — efeito prismático Liquid Glass (Apple WWDC25) */
+.lg-prismatic-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.20),
+    transparent
+  );
   pointer-events: none;
 }
 

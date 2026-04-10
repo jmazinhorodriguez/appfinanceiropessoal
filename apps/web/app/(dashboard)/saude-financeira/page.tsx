@@ -19,11 +19,6 @@ const glass = {
   WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.10)',
   borderRadius: 20, position: 'relative' as const, overflow: 'hidden' as const,
 };
-const prismLine = {
-  position: 'absolute' as const, top: 0, left: 0, right: 0, height: 1,
-  background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.20),transparent)',
-  pointerEvents: 'none' as const,
-};
 
 const PHASES = [
   'Observando contas bancárias…', 'Calculando métricas financeiras…',
@@ -38,6 +33,28 @@ export default function SaudeFinanceiraPage() {
   const [phase, setPhase]          = useState('');
   const [activeInsight, setActive] = useState<any>(null);
   const [activeTab, setTab]        = useState<'visao'|'vieses'|'nudges'|'logs'>('visao');
+  const [executing, setExecuting]  = useState<string | null>(null);
+
+  const executeNudge = async (nudge: any) => {
+    setExecuting(nudge.label);
+    try {
+      const res = await fetch('/api/agents/financial-health/nudge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nudge)
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message);
+      } else {
+        alert('Erro ao executar: ' + data.error);
+      }
+    } catch (e) {
+      alert('Erro de conexão');
+    } finally {
+      setExecuting(null);
+    }
+  };
 
   const fetchReport = useCallback(async (force = false) => {
     force ? setRunning(true) : setLoading(true);
@@ -83,7 +100,7 @@ export default function SaudeFinanceiraPage() {
     <div style={{ padding:'clamp(16px, 4vw, 28px) clamp(16px, 5vw, 32px)', maxWidth:1280, margin:'0 auto' }}>
       {/* HEADER */}
       <div style={{ ...glass, padding:'28px 32px', marginBottom:24, background:'rgba(10,132,255,0.08)', border:'1px solid rgba(10,132,255,0.18)', boxShadow:`0 8px 40px ${lc.glow}` }}>
-        <div style={prismLine} />
+        <div className="lg-prismatic-line" />
         <div style={{ position:'absolute', top:-60, right:-40, width:200, height:200, borderRadius:'50%', background:'radial-gradient(circle,rgba(10,132,255,0.14) 0%,transparent 70%)', filter:'blur(24px)', pointerEvents:'none' }} />
         <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
           <div style={{ display:'flex', alignItems:'center', gap:16 }}>
@@ -144,7 +161,7 @@ export default function SaudeFinanceiraPage() {
 
       {report?.summary && (
         <div style={{ ...glass, padding:'14px 20px', marginBottom:20, background:lc.bg, border:`1px solid ${lc.color.replace('1)','0.25)')}` }}>
-          <div style={prismLine} />
+          <div className="lg-prismatic-line" />
           <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)', lineHeight:1.7 }}>{report.summary}</p>
         </div>
       )}
@@ -166,7 +183,7 @@ export default function SaudeFinanceiraPage() {
             const c = insightColors[ins.type]||insightColors.info;
             return (
               <div key={idx} onClick={() => setActive(ins)} style={{ ...glass, padding:'18px 20px', cursor:'pointer', border:`1px solid ${c}22` }}>
-                <div style={prismLine} />
+                <div className="lg-prismatic-line" />
                 <div style={{ display:'flex', gap:12 }}>
                   <div style={{ width:36, height:36, borderRadius:10, background:`${c}18`, border:`1px solid ${c}30`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     <Icon size={17} color={c} />
@@ -206,7 +223,7 @@ export default function SaudeFinanceiraPage() {
             const sc = b.priority==='critica'?'rgba(255,69,58,1)':b.priority==='alta'?'rgba(255,159,10,1)':b.priority==='media'?'rgba(255,214,10,1)':'rgba(48,209,88,1)';
             return (
               <div key={i} style={{ ...glass, padding:'20px 22px', border:`1px solid ${sc}22` }}>
-                <div style={prismLine} />
+                <div className="lg-prismatic-line" />
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <Brain size={15} color="rgba(191,90,242,1)" />
@@ -235,7 +252,7 @@ export default function SaudeFinanceiraPage() {
             const ic = n.impact==='alto'?'rgba(48,209,88,1)':n.impact==='medio'?'rgba(255,214,10,1)':'rgba(90,200,250,1)';
             return (
               <div key={i} style={{ ...glass, padding:'20px 22px' }}>
-                <div style={prismLine} />
+                <div className="lg-prismatic-line" />
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <Zap size={15} color={ic} />
@@ -249,8 +266,14 @@ export default function SaudeFinanceiraPage() {
                     <TrendingUp size={14} /> {new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n.potentialGain)}/mês
                   </div>
                 )}
-                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'rgba(255,255,255,0.35)' }}>
-                  <ChevronRight size={12} /> {n.category}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'rgba(255,255,255,0.35)' }}>
+                    <ChevronRight size={12} /> {n.category}
+                  </div>
+                  <button onClick={() => executeNudge(n)} disabled={executing === n.label} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:10, background:`${ic}18`, border:`1px solid ${ic}40`, color:ic, fontSize:11, fontWeight:700, cursor:'pointer', opacity: executing === n.label ? 0.6 : 1 }}>
+                    {executing === n.label ? <RefreshCw size={12} style={{ animation:'spin 1s linear infinite' }} /> : <CheckCircle size={12} />}
+                    Ativar Nudge
+                  </button>
                 </div>
               </div>
             );
@@ -261,7 +284,7 @@ export default function SaudeFinanceiraPage() {
       {/* TAB LOGS */}
       {activeTab==='logs' && (
         <div style={{ ...glass, padding:'20px 24px' }}>
-          <div style={prismLine} />
+          <div className="lg-prismatic-line" />
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:18 }}>
             <Activity size={16} color="rgba(10,132,255,1)" />
             <span style={{ fontSize:14, fontWeight:700 }}>Logs da Última Execução</span>

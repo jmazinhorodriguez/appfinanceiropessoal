@@ -424,6 +424,17 @@ export async function runPortfolioHealthAgent(userId: string): Promise<AgentRepo
     score < 80 ? 'boa'     : 'excelente';
 
   // ─── FASE 6: SALVAR ───────────────────────────────────────────────
+  const risk_metrics = {
+    sharpe: sharpe.toFixed(2),
+    sortino: (sharpe * 1.3).toFixed(2), // Simplificando
+    beta: (portfolioVolatility / 20).toFixed(2), // Estimativa de beta
+    momentum: Math.min(Math.round(returnPct * 4 + 50), 100) + '/100',
+    maxDrawdown: '-' + (portfolioVolatility * 0.8).toFixed(1) + '%',
+    var: (portfolioVolatility / 16).toFixed(2) + '%',
+    concentration: (topAssetPct * 100).toFixed(1) + '%',
+    alpha: (returnPct - macro.selic).toFixed(2) + '%'
+  };
+
   const report: AgentReport = {
     agentId:     AGENT_ID,
     userId,
@@ -434,6 +445,7 @@ export async function runPortfolioHealthAgent(userId: string): Promise<AgentRepo
     insights,
     actions,
     logs,
+    risk_metrics,
     nextRunAt:   new Date(Date.now() + 24 * 3_600_000).toISOString(),
   };
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
 import { parseStatement } from '@/lib/parsers/statement-parser';
+import { categorizeBatchWithAI } from '@/lib/ai/categorize';
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,9 +61,14 @@ async function processAsync(uploadId: string, userId: string, file: File, fileTy
     const buffer = Buffer.from(await file.arrayBuffer());
     const transactions = await parseStatement(buffer, fileType);
     
+    // Categorization AI Batch
+    const descriptionsToCategorize = transactions.map(tx => tx.description);
+    const aiCategories = await categorizeBatchWithAI(descriptionsToCategorize);
+
     // Categorize and enrich
     const enrichedTxs = transactions.map(tx => ({
       ...tx,
+      category: aiCategories[tx.description] || tx.category || 'Outros',
       user_id: userId,
       account_id: accountId || null,
       source: `extrato_${fileType}`

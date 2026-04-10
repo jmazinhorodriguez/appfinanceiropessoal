@@ -32,6 +32,7 @@ export interface AgentReport {
   actions: AgentAction[];
   logs: AgentLog[];
   nextRunAt: string;
+  risk_metrics?: any;
 }
 
 export interface AgentInsight {

@@ -29,11 +29,6 @@ const glass = {
   WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.10)',
   borderRadius: 20, position: 'relative' as const, overflow: 'hidden' as const,
 };
-const prismLine = {
-  position: 'absolute' as const, top: 0, left: 0, right: 0, height: 1,
-  background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.20),transparent)',
-  pointerEvents: 'none' as const,
-};
 
 const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 const pct = (v: number) => `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}%`;
@@ -100,7 +95,7 @@ export default function SaudeAplicacoesPage() {
 
       {/* HEADER */}
       <div style={{ ...glass, padding:'28px 32px', marginBottom:24, background:'rgba(191,90,242,0.08)', border:'1px solid rgba(191,90,242,0.18)', boxShadow:`0 8px 48px ${lc.glow}` }}>
-        <div style={prismLine} />
+        <div className="lg-prismatic-line" />
         <div style={{ position:'absolute', top:-60, right:-40, width:220, height:220, borderRadius:'50%', background:'radial-gradient(circle,rgba(191,90,242,0.15) 0%,transparent 70%)', filter:'blur(24px)', pointerEvents:'none' }} />
 
         <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
@@ -145,7 +140,7 @@ export default function SaudeAplicacoesPage() {
       {/* RESUMO */}
       {report?.summary && (
         <div style={{ ...glass, padding:'14px 20px', marginBottom:20 }}>
-          <div style={prismLine} />
+          <div className="lg-prismatic-line" />
           <p style={{ fontSize:13, color:'rgba(255,255,255,0.65)', lineHeight:1.7 }}>{report.summary}</p>
         </div>
       )}
@@ -171,7 +166,7 @@ export default function SaudeAplicacoesPage() {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:16 }}>
           {/* Score Breakdown */}
           <div style={{ ...glass, padding:'22px' }}>
-            <div style={prismLine} />
+            <div className="lg-prismatic-line" />
             <div style={{ fontSize:13, fontWeight:700, marginBottom:16 }}>Score por Dimensão</div>
             {insights.slice(0,5).map((ins: any, i: number) => {
               const c = insightColors[ins.type]||insightColors.info;
@@ -193,7 +188,7 @@ export default function SaudeAplicacoesPage() {
 
           {/* Ações rápidas */}
           <div style={{ ...glass, padding:'22px' }}>
-            <div style={prismLine} />
+            <div className="lg-prismatic-line" />
             <div style={{ fontSize:13, fontWeight:700, marginBottom:16 }}>⚡ Ações Prioritárias</div>
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {actions.slice(0,5).map((a: any, i: number) => {
@@ -219,7 +214,7 @@ export default function SaudeAplicacoesPage() {
 
           {/* Críticos */}
           <div style={{ ...glass, padding:'22px' }}>
-            <div style={prismLine} />
+            <div className="lg-prismatic-line" />
             <div style={{ fontSize:13, fontWeight:700, marginBottom:16 }}>🚨 Alertas Críticos</div>
             {insights.filter((i: any) => i.priority==='critica'||i.priority==='alta').length===0 ? (
               <div style={{ textAlign:'center', padding:24 }}>
@@ -252,7 +247,7 @@ export default function SaudeAplicacoesPage() {
             const Icon = ins.type==='danger'?AlertTriangle:ins.type==='warning'?AlertTriangle:CheckCircle;
             return (
               <div key={i} onClick={() => setItem(ins)} style={{ ...glass, padding:'20px 22px', cursor:'pointer', border:`1px solid ${c}22`, transition:'all 0.2s' }}>
-                <div style={prismLine} />
+                <div className="lg-prismatic-line" />
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <div style={{ width:32, height:32, borderRadius:10, background:`${c}18`, border:`1px solid ${c}30`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
@@ -284,7 +279,7 @@ export default function SaudeAplicacoesPage() {
       {/* TAB MACRO */}
       {activeTab==='macro' && (
         <div style={{ ...glass, padding:'24px', background:'rgba(191,90,242,0.06)', border:'1px solid rgba(191,90,242,0.18)' }}>
-          <div style={prismLine} />
+          <div className="lg-prismatic-line" />
           <div style={{ fontSize:13, fontWeight:700, marginBottom:20 }}>Análise Macroeconômica — Shiller & Tobin</div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:12 }}>
             {[
@@ -336,7 +331,7 @@ export default function SaudeAplicacoesPage() {
             const s = scientists[m.scientist];
             return (
               <div key={i} style={{ ...glass, padding:'20px 22px', border:`1px solid ${m.ok?'rgba(48,209,88,0.18)':'rgba(255,214,10,0.18)'}` }}>
-                <div style={prismLine} />
+                <div className="lg-prismatic-line" />
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
                   <span style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.60)' }}>{m.label}</span>
                   <span style={{ fontSize:9, fontWeight:700, color:s.color, background:s.bg, padding:'2px 8px', borderRadius:10 }}>{s.name}</span>
@@ -361,7 +356,7 @@ export default function SaudeAplicacoesPage() {
       {activeTab==='rebalance' && (
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
           <div style={{ ...glass, padding:'16px 20px', background:'rgba(10,132,255,0.06)', border:'1px solid rgba(10,132,255,0.16)' }}>
-            <div style={prismLine} />
+            <div className="lg-prismatic-line" />
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <Shield size={16} color="rgba(10,132,255,1)" />
               <span style={{ fontSize:13, fontWeight:700 }}>Rebalanceamento Sugerido — Larry Fink (BlackRock)</span>
@@ -379,7 +374,7 @@ export default function SaudeAplicacoesPage() {
             const ic = a.impact==='alto'?'rgba(48,209,88,1)':a.impact==='medio'?'rgba(255,214,10,1)':'rgba(90,200,250,1)';
             return (
               <div key={i} style={{ ...glass, padding:'20px 22px' }}>
-                <div style={prismLine} />
+                <div className="lg-prismatic-line" />
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <Zap size={14} color={ic} />
@@ -405,7 +400,7 @@ export default function SaudeAplicacoesPage() {
       {/* TAB LOGS */}
       {activeTab==='logs' && (
         <div style={{ ...glass, padding:'20px 24px' }}>
-          <div style={prismLine} />
+          <div className="lg-prismatic-line" />
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:18 }}>
             <Activity size={16} color="rgba(191,90,242,1)" />
             <span style={{ fontSize:14, fontWeight:700 }}>Logs da Última Execução — Agente de Portfólio</span>
@@ -436,7 +431,7 @@ export default function SaudeAplicacoesPage() {
         <div style={{ position:'fixed', inset:0, zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
           <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.70)', backdropFilter:'blur(8px)' }} onClick={() => setItem(null)} />
           <div style={{ zIndex:1, width:'100%', maxWidth:580, ...glass, padding:'28px 32px', border:'1px solid rgba(255,255,255,0.16)' }}>
-            <div style={prismLine} />
+            <div className="lg-prismatic-line" />
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18 }}>
               <h2 style={{ fontSize:17, fontWeight:800, maxWidth:'80%' }}>{activeItem.title}</h2>
               <button onClick={() => setItem(null)} style={{ background:'transparent', border:'none', color:'rgba(255,255,255,0.40)', cursor:'pointer', minWidth:44, minHeight:44, display:'flex', alignItems:'center', justifyContent:'center' }}>
