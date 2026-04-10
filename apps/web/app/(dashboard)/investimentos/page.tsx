@@ -55,7 +55,12 @@ export default function InvestimentosPage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/pdf': ['.pdf'], 'text/plain': ['.txt'] },
+    accept: { 
+      'application/pdf': ['.pdf'], 
+      'text/plain': ['.txt'],
+      'text/csv': ['.csv'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
+    },
     maxSize: 10 * 1024 * 1024,
     multiple: false
   });
@@ -332,6 +337,8 @@ export default function InvestimentosPage() {
                   <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Suporte autônomo para PDFs da XP, Rico, BTG, Nu Invest e Clear.</p>
                   <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
                     <span className="badge badge-blue">PDF</span>
+                    <span className="badge badge-blue">CSV</span>
+                    <span className="badge badge-blue">XLSX</span>
                   </div>
                 </div>
               )}

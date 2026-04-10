@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
 import pdfParse from 'pdf-parse';
+import * as xlsx from 'xlsx';
+import { parse as parseCSV } from 'csv-parse/sync';
 import { parseB3File, B3Trade } from '@/lib/parsers/b3-parser';
 
 export async function POST(request: NextRequest) {
@@ -28,6 +30,20 @@ export async function POST(request: NextRequest) {
     if (fileType === 'pdf') {
       const data = await pdfParse(buffer);
       contentStr = data.text;
+    } else if (fileType === 'xlsx') {
+      const workbook = xlsx.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const rows = xlsx.utils.sheet_to_json<any[]>(workbook.Sheets[sheetName], { header: 1 });
+      contentStr = rows.map(r => Object.values(r).join(' ')).join('\n');
+    } else if (fileType === 'csv') {
+      const records = parseCSV(buffer, { 
+        skip_empty_lines: true,
+        relax_column_count: true,
+        trim: true,
+        bom: true,
+        delimiter: [',', ';', '\t']
+      }) as any[][];
+      contentStr = records.map(r => r.join(' ')).join('\n');
     } else {
       contentStr = buffer.toString('utf-8');
     }
