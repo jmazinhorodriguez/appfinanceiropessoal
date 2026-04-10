@@ -26,38 +26,51 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    console.log(`[UPLOAD_API] Received file: ${file.name} (${file.size} bytes), type: ${fileType}`);
+
     let contentStr = '';
     
     if (fileType === 'pdf') {
+      console.log(`[UPLOAD_API] Parsing PDF...`);
       const data = await pdfParse(buffer);
       contentStr = data.text;
     } else if (fileType === 'xlsx') {
+      console.log(`[UPLOAD_API] Parsing XLSX...`);
       const workbook = xlsx.read(buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
-      const rows = xlsx.utils.sheet_to_json<any[]>(workbook.Sheets[sheetName], { header: 1 });
-      contentStr = rows.map(r => Object.values(r).join(' ')).join('\n');
+      const sheet = workbook.Sheets[sheetName];
+      const rows = xlsx.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+      
+      contentStr = rows
+        .map(r => Array.isArray(r) ? r.join(' | ') : Object.values(r).join(' | '))
+        .join('\n');
+      console.log(`[UPLOAD_API] XLSX converted to string. Preview (100 chars): ${contentStr.substring(0, 100)}`);
     } else if (fileType === 'csv') {
-      const records = parseCSV(buffer, { 
+      console.log(`[UPLOAD_API] Parsing CSV...`);
+      const rawBody = buffer.toString('utf-8');
+      const records = parseCSV(rawBody, { 
         skip_empty_lines: true,
         relax_column_count: true,
         trim: true,
         bom: true,
         delimiter: [',', ';', '\t']
       }) as any[][];
-      contentStr = records.map(r => r.join(' ')).join('\n');
+      contentStr = records.map(r => r.join(' | ')).join('\n');
+      console.log(`[UPLOAD_API] CSV converted to string. Preview (100 chars): ${contentStr.substring(0, 100)}`);
     } else {
       contentStr = buffer.toString('utf-8');
     }
 
     let result = parseB3File(contentStr);
+    console.log(`[UPLOAD_API] Heuristic parser found ${result.trades.length} trades.`);
 
     // Fallback absoluto: Se a heurística e as regexes falharem (layout exótico) ou se quiser achar proventos.
-    // Sempre passamos pela IA caso não haja trades encontrados (ex: planilha só de proventos)
     let aiExtractions: any = null;
     if (result.trades.length === 0) {
-       console.log('Regex parser failed. Falling back to Gemini AI for B3/Proventos extraction...');
+       console.log('[UPLOAD_API] Falling back to Gemini AI for extraction...');
        const aiResult = await parseB3WithAI(contentStr);
        aiExtractions = aiResult;
+       console.log(`[UPLOAD_API] AI found ${aiResult.trades?.length || 0} trades and ${aiResult.proventos?.length || 0} proventos.`);
        
        if ((aiResult.trades && aiResult.trades.length > 0) || (aiResult.proventos && aiResult.proventos.length > 0)) {
          result.trades = aiResult.trades || [];

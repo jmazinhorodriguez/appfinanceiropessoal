@@ -26,13 +26,21 @@ export async function parseB3WithAI(text: string): Promise<B3ExtractionResult> {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
-    const prompt = `
-Você é um especialista financeiro.
-Sua missão é ler o texto abaixo (de um PDF, CSV ou Excel) e extrair:
-1. Operações de COMPRA e VENDA de ativos (trades).
-2. Proventos (Juros Sobre Capital Próprio, Dividendos, Rendimentos, Bonificações).
+    console.log(`[AI_EXTRACTOR] Sending text to Gemini (Length: ${text.length})...`);
 
-Responda APENAS com um objeto JSON válido, com a seguinte estrutura:
+    const prompt = `
+Você é um especialista financeiro brasileiro.
+Sua missão é ler o texto abaixo (que pode ser um PDF de nota de corretagem, um CSV de extrato bancário ou uma planilha de proventos) e extrair:
+1. Operações de COMPRA e VENDA de ativos (ações, FIIs, ETFs, BDRs).
+2. Proventos (Dividendos, JCP, Rendimentos, Bonificações, Rentabilidade de Investimentos).
+
+REGRAS DE EXTRAÇÃO:
+- Tickers: Identifique tickers da B3 (ex: PETR4, SOJA3, KLBN11). Se o texto disser "BOA SAFRA SEMENTES", o ticker é "SOJA3".
+- Datas: Converta para o formato ISO YYYY-MM-DD.
+- Valores: Garanta que centavos sejam tratados corretamente (use ponto para decimais no JSON).
+- Proventos de Extrato: Se encontrar linhas como "RENTAB.INVEST FACILCRED" ou "DIVIDENDO", extraia como provento.
+
+Responda APENAS com um objeto JSON válido:
 {
   "trades": [
     {
@@ -51,27 +59,33 @@ Responda APENAS com um objeto JSON válido, com a seguinte estrutura:
     {
       "data": "YYYY-MM-DD",
       "ticker": "string",
-      "tipo": "string (ex: Juros Sobre Capital Próprio, Dividendo, Rendimento)",
-      "quantidade_custodia": 100,
-      "valor_por_cota": 0.15,
+      "tipo": "string (ex: Dividendo, Juros Sobre Capital Próprio, Rendimento, Rentabilidade)",
+      "quantidade_custodia": 0,
+      "valor_por_cota": 0,
       "valor_liquido": 15.00
     }
   ]
 }
 
-Regras:
-1. Ignore linhas que não sejam dados financeiros reais (como saldos de conta, cabeçalhos, etc).
-2. Para os Tickers, extraia apenas as letras/números da B3 se estiverem acompanhados do nome da empresa (ex: SOJA3, CSMG3, KLBN11, PETR4).
-3. ATENÇÃO: Retorne APENAS o JSON. Sem blocos markdown (tais como \`\`\`json).
-
-Texto da nota/planilha:
-${text.substring(0, 15000)}
+Texto para análise:
+---
+${text.substring(0, 12000)}
+---
 `;
 
     const result = await model.generateContent(prompt);
     let rawText = result.response.text().trim();
     
+    console.log(`[AI_EXTRACTOR] Raw Response from AI: ${rawText.substring(0, 200)}...`);
+
+    // Limpeza de blocos de código markdown que a IA as vezes insere
     rawText = rawText.replace(/```json/gi, '').replace(/```/gi, '').trim();
+    
+    // Tentativa de encontrar o JSON caso haja texto extra
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      rawText = jsonMatch[0];
+    }
     
     const parsedData = JSON.parse(rawText);
     
@@ -79,8 +93,8 @@ ${text.substring(0, 15000)}
       trades: Array.isArray(parsedData.trades) ? parsedData.trades : [],
       proventos: Array.isArray(parsedData.proventos) ? parsedData.proventos : []
     };
-  } catch (error) {
-    console.error('Erro na extração de nota B3 via AI:', error);
+  } catch (error: any) {
+    console.error('[AI_EXTRACTOR] Erro crítico:', error);
     return { trades: [], proventos: [] };
   }
 }
