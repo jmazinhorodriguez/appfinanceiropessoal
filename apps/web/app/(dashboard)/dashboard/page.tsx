@@ -20,24 +20,24 @@ export default async function DashboardPage() {
     .single<Profile>();
 
   // Real data fetching
-  const { data: accounts } = await supabase.from('bank_accounts').select('balance').eq('user_id', user.id);
-  const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.balance || 0), 0) || 0;
+  const { data: accounts } = await supabase.from('contas').select('saldo').eq('user_id', user.id);
+  const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.saldo || 0), 0) || 0;
 
   const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-  const { data: currentMonthTxs } = await supabase.from('transactions')
-    .select('amount, type')
+  const { data: currentMonthTxs } = await supabase.from('transacoes')
+    .select('valor, tipo')
     .eq('user_id', user.id)
-    .gte('date', firstDayOfMonth);
+    .gte('data', firstDayOfMonth);
 
   let moIncome = 0;
   let moExpense = 0;
   currentMonthTxs?.forEach(tx => {
-    if (tx.type === 'receita') moIncome += Number(tx.amount);
-    if (tx.type === 'despesa') moExpense += Math.abs(Number(tx.amount));
+    if (tx.tipo === 'receita') moIncome += Number(tx.valor);
+    if (tx.tipo === 'despesa') moExpense += Math.abs(Number(tx.valor));
   });
 
-  const { data: assets } = await supabase.from('portfolio_assets').select('quantity, current_price, avg_price').eq('user_id', user.id);
-  const portfolioValue = assets?.reduce((sum, a) => sum + (Number(a.quantity) * Number(a.current_price || a.avg_price || 0)), 0) || 0;
+  const { data: assets } = await supabase.from('ativos_carteira').select('quantidade, preco_atual, preco_medio').eq('user_id', user.id);
+  const portfolioValue = assets?.reduce((sum, a) => sum + (Number(a.quantidade) * Number(a.preco_atual || a.preco_medio || 0)), 0) || 0;
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -52,10 +52,10 @@ export default async function DashboardPage() {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
   sixMonthsAgo.setDate(1);
 
-  const { data: last6moTxs } = await supabase.from('transactions')
-    .select('amount, type, date')
+  const { data: last6moTxs } = await supabase.from('transacoes')
+    .select('valor, tipo, data')
     .eq('user_id', user.id)
-    .gte('date', sixMonthsAgo.toISOString());
+    .gte('data', sixMonthsAgo.toISOString());
 
   const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
   const flowMap: Record<string, { receitas: number, despesas: number }> = {};
@@ -68,11 +68,12 @@ export default async function DashboardPage() {
   }
 
   last6moTxs?.forEach(tx => {
-    const d = new Date(tx.date);
+    // Correct string splitting for date if necessary, assuming tx.data is YYYY-MM-DD
+    const d = new Date(tx.data + 'T00:00:00');
     const mKey = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().substring(2)}`;
     if (flowMap[mKey]) {
-      if (tx.type === 'receita') flowMap[mKey].receitas += Number(tx.amount);
-      if (tx.type === 'despesa') flowMap[mKey].despesas += Math.abs(Number(tx.amount));
+      if (tx.tipo === 'receita') flowMap[mKey].receitas += Number(tx.valor);
+      if (tx.tipo === 'despesa') flowMap[mKey].despesas += Math.abs(Number(tx.valor));
     }
   });
 
@@ -82,13 +83,13 @@ export default async function DashboardPage() {
     despesas: flowMap[k].despesas
   }));
 
-  const { data: dbRecentTxs } = await supabase.from('transactions')
-    .select('*')
+  const { data: dbRecentTxs } = await supabase.from('transacoes')
+    .select('id, valor, tipo, data, descricao, categorias(nome)')
     .eq('user_id', user.id)
-    .order('date', { ascending: false })
+    .order('data', { ascending: false })
     .limit(6);
 
-  const recentTxs: Partial<Transaction>[] = dbRecentTxs || [];
+  const recentTxs = dbRecentTxs || [];
 
   return (
     <div style={{ padding: 'clamp(16px, 4vw, 32px) clamp(16px, 5vw, 40px)', maxWidth: 1440, margin: '0 auto' }}>
@@ -133,24 +134,24 @@ export default async function DashboardPage() {
           </div>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {recentTxs.map((tx) => (
+            {recentTxs.map((tx: any) => (
               <div key={tx.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ 
                     width: 40, height: 40, borderRadius: 12, 
-                    background: tx.type === 'receita' ? 'var(--accent-green-g)' : 'var(--accent-red-g)',
-                    color: tx.type === 'receita' ? 'var(--accent-green)' : 'var(--accent-red)',
+                    background: tx.tipo === 'receita' ? 'var(--accent-green-g)' : 'var(--accent-red-g)',
+                    color: tx.tipo === 'receita' ? 'var(--accent-green)' : 'var(--accent-red)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    {tx.type === 'receita' ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+                    {tx.tipo === 'receita' ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
                   </div>
                   <div>
-                    <p style={{ margin: '0 0 2px', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{tx.description}</p>
-                    <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)' }}>{tx.category} • {formatDate(tx.date || '')}</p>
+                    <p style={{ margin: '0 0 2px', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{tx.descricao}</p>
+                    <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)' }}>{tx.categorias?.nome || 'Outros'} • {formatDate(tx.data || '')}</p>
                   </div>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: tx.type === 'receita' ? 'var(--accent-green)' : 'var(--text-primary)' }}>
-                  {tx.type === 'receita' ? '+' : ''}{formatBRL(tx.amount || 0)}
+                <div style={{ fontSize: 14, fontWeight: 600, color: tx.tipo === 'receita' ? 'var(--accent-green)' : 'var(--text-primary)' }}>
+                  {tx.tipo === 'receita' ? '+' : ''}{formatBRL(tx.valor || 0)}
                 </div>
               </div>
             ))}

@@ -1,8 +1,8 @@
-'use client';
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, CheckCircle, XCircle, Loader2, File as FileIcon, Building2 } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, Loader2, File as FileIcon, Building2, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatBRL, formatDate } from '@/lib/utils/format';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function ContasPage() {
   const [activeTab, setActiveTab] = useState('importar');
@@ -10,6 +10,20 @@ export default function ContasPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [importedCount, setImportedCount] = useState(0);
   const [uploadId, setUploadId] = useState('');
+  const [transacoes, setTransacoes] = useState<any[]>([]);
+  
+  const supabase = createClientComponentClient();
+
+  useEffect(() => {
+    async function loadData() {
+      const { data } = await supabase.from('transacoes')
+        .select('*, categorias(nome)')
+        .order('data', { ascending: false })
+        .limit(30);
+      if (data) setTransacoes(data);
+    }
+    loadData();
+  }, [supabase, status]);
 
   const checkStatus = useCallback(async (id: string, attempts = 0) => {
     if (attempts > 30) {
@@ -185,9 +199,52 @@ export default function ContasPage() {
         </div>
       )}
       
-      {activeTab !== 'importar-extrato' && (
-        <div className="lg-card animate-fade-in" style={{ padding: 40, textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-secondary)' }}>Esta visão estaria preenchida na implementação completa.</p>
+      {activeTab === 'visao-geral' && (
+        <div className="lg-card animate-fade-in" style={{ padding: 32 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 24 }}>Saldos Recentes (Transações Importadas)</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>Este é o balanço rápido das últimas 30 movimentações espelhadas no banco.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+            <div style={{ padding: 24, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)', borderRadius: 16 }}>
+               <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>Balanço Estimado (Últimos Registros)</span>
+               <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-primary)', marginTop: 8 }}>
+                  {formatBRL(transacoes.reduce((acc, tx) => tx.tipo === 'receita' ? acc + Number(tx.valor) : acc - Number(tx.valor), 0))}
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'transacoes' && (
+        <div className="lg-card animate-fade-in" style={{ padding: 32 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 24 }}>Últimas Movimentações</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {transacoes.length === 0 ? (
+               <p style={{ color: 'var(--text-secondary)' }}>Nenhuma transação encontrada no momento.</p>
+            ) : transacoes.map((tx: any) => (
+              <div key={tx.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ 
+                    width: 44, height: 44, borderRadius: 12, 
+                    background: tx.tipo === 'receita' ? 'var(--accent-green-g)' : 'var(--accent-red-g)',
+                    color: tx.tipo === 'receita' ? 'var(--accent-green)' : 'var(--accent-red)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {tx.tipo === 'receita' ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+                  </div>
+                  <div>
+                    <p style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 500, color: 'var(--text-primary)' }}>{tx.descricao}</p>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--text-tertiary)' }}>{tx.categorias?.nome || 'Outros'} • Origem: {tx.origem || 'importacao'}</p>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: tx.tipo === 'receita' ? 'var(--accent-green)' : 'var(--text-primary)' }}>
+                    {tx.tipo === 'receita' ? '+' : ''}{formatBRL(tx.valor || 0)}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>{formatDate(tx.data || '')}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
