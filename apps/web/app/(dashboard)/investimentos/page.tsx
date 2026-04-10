@@ -1,13 +1,64 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { formatBRL, formatUSD, formatPct, formatDate } from '@/lib/utils/format';
-import { PlusCircle, Search, TrendingUp, TrendingDown, Clock, Building2 } from 'lucide-react';
+import { PlusCircle, Search, TrendingUp, TrendingDown, Clock, Building2, Upload, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Dividend, PortfolioAsset } from '@/types/database';
+import { useDropzone } from 'react-dropzone';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function InvestimentosPage() {
-  const [activeTab, setActiveTab] = useState('carteira');
-  
-  // Dummy data
+  const [activeTab, setActiveTab] = useState('importar-notas');
+  const [status, setStatus] = useState<'idle'|'uploading'|'processing'|'done'|'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [importedCount, setImportedCount] = useState(0);
+  const [historico, setHistorico] = useState<any[]>([]);
+
+  const supabase = createClientComponentClient();
+
+  useEffect(() => {
+    async function loadData() {
+      const { data } = await supabase.from('ordens').select('*').order('data', { ascending: false }).limit(50);
+      if (data) setHistorico(data);
+    }
+    loadData();
+  }, [supabase, status]);
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+
+    setStatus('uploading');
+    setErrorMsg('');
+
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('fileType', ext || '');
+
+    try {
+      const res = await fetch('/api/investimentos/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setStatus('done');
+      setImportedCount(data.count);
+
+    } catch (e: any) {
+      setStatus('error');
+      setErrorMsg(e.message);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'application/pdf': ['.pdf'], 'text/plain': ['.txt'] },
+    maxSize: 10 * 1024 * 1024,
+    multiple: false
+  });
   const assets: (Partial<PortfolioAsset> & { qty: number; avg: number; current: number; profit: number; return: number; curr?: string })[] = [
     { id: '1', ticker: 'BBDC4', name: 'Bradesco PN', asset_type: 'acao_br', qty: 500, avg: 14.50, current: 15.20, profit: 350, return: 4.82 },
     { id: '2', ticker: 'ITUB4', name: 'Itaú Unibanco', asset_type: 'acao_br', qty: 300, avg: 26.80, current: 25.10, profit: -510, return: -6.34 },
@@ -24,7 +75,7 @@ export default function InvestimentosPage() {
   return (
     <div style={{ padding: 'clamp(16px, 4vw, 32px) clamp(16px, 5vw, 40px)', maxWidth: 1200, margin: '0 auto' }} className="animate-fade-in">
       <div style={{ display: 'flex', gap: 32, borderBottom: '1px solid var(--border-subtle)', marginBottom: 32 }}>
-        {['Carteira', 'Nova Ordem', 'Proventos', 'Histórico'].map((tab) => (
+        {['Carteira', 'Nova Ordem', 'Proventos', 'Histórico', 'Importar Notas'].map((tab) => (
           <button 
             key={tab} 
             onClick={() => setActiveTab(tab.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(" ", "-"))}
@@ -218,9 +269,101 @@ export default function InvestimentosPage() {
       )}
 
       {activeTab === 'historico' && (
-        <div className="lg-card" style={{ padding: 40, textAlign: 'center' }}>
-          <Building2 size={48} color="var(--text-tertiary)" style={{ margin: '0 auto 20px', display: 'block' }} />
-          <h3 style={{ fontSize: 18, color: 'var(--text-secondary)' }}>Histórico sincronizado via B3 (em desenvolvimento)</h3>
+        <div className="lg-card animate-fade-in" style={{ padding: 32 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 24 }}>Histórico de Ordens (Sincronizado)</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {historico.length === 0 ? (
+               <div style={{ textAlign: 'center', padding: 24 }}>
+                 <p style={{ color: 'var(--text-secondary)' }}>Nenhuma ordem encontrada. Importe suas notas de corretagem (PDF).</p>
+               </div>
+            ) : historico.map((ord: any) => (
+              <div key={ord.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ 
+                    width: 44, height: 44, borderRadius: 12, 
+                    background: ord.tipo === 'compra' ? 'var(--accent-blue-g)' : 'var(--accent-amber-g)',
+                    color: ord.tipo === 'compra' ? 'var(--accent-blue)' : 'var(--accent-amber)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {ord.tipo === 'compra' ? <PlusCircle size={20} /> : <TrendingDown size={20} />}
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 4px' }}>
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{ord.ticker}</p>
+                      <span style={{ fontSize: 11, background: 'var(--glass-thick)', padding: '2px 8px', borderRadius: 10 }}>{ord.mercado}</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--text-tertiary)' }}>
+                      {ord.quantidade} ativos ({ord.tipo}) a {formatBRL(ord.preco)}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {formatBRL(ord.total || 0)}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>{formatDate(ord.data || '')}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'importar-notas' && (
+        <div className="animate-fade-in">
+          <div className="lg-card" style={{ padding: 40, textAlign: 'center', marginBottom: 32 }}>
+            <div 
+              {...getRootProps()} 
+              style={{ 
+                border: `2px dashed ${isDragActive ? 'var(--accent-blue)' : 'var(--border-strong)'}`,
+                background: isDragActive ? 'rgba(10,132,255,0.05)' : 'rgba(255,255,255,0.02)',
+                borderRadius: 20, padding: 60, cursor: status === 'idle' || status === 'error' ? 'pointer' : 'default',
+                transition: 'all 0.2s ease', position: 'relative', overflow: 'hidden'
+              }}
+            >
+              <input {...getInputProps()} disabled={status === 'uploading' || status === 'processing'} />
+              
+              {status === 'idle' && (
+                <div className="animate-fade-up">
+                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--glass-thick)', border: '1px solid var(--border-regular)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                    <Upload size={32} color="var(--accent-blue)" />
+                  </div>
+                  <h3 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Arraste sua Nota de Corretagem (B3)</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Suporte autônomo para PDFs da XP, Rico, BTG, Nu Invest e Clear.</p>
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
+                    <span className="badge badge-blue">PDF</span>
+                  </div>
+                </div>
+              )}
+
+              {status === 'uploading' && (
+                <div className="animate-fade-in">
+                  <Loader2 size={40} color="var(--accent-blue)" className="animate-spin" style={{ margin: '0 auto 20px', display: 'block' }} />
+                  <h3 style={{ fontSize: 18, fontWeight: 600 }}>Extraindo as ordens da prancheta...</h3>
+                </div>
+              )}
+
+              {status === 'done' && (
+                <div className="animate-fade-in">
+                  <CheckCircle size={48} color="var(--accent-green)" style={{ margin: '0 auto 20px', display: 'block' }} />
+                  <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--accent-green)', marginBottom: 8 }}>Sucesso!</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 15 }}>
+                    {importedCount} negócios decodificados e cruzados via B3.
+                  </p>
+                  <button onClick={(e) => { e.stopPropagation(); setStatus('idle'); }} className="btn-glass" style={{ marginTop: 24 }}>Importar mais notas</button>
+                </div>
+              )}
+
+              {status === 'error' && (
+                <div className="animate-fade-in">
+                  <XCircle size={48} color="var(--accent-red)" style={{ margin: '0 auto 20px', display: 'block' }} />
+                  <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--accent-red)', marginBottom: 8 }}>Erro de Extração</h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{errorMsg}</p>
+                  <button onClick={(e) => { e.stopPropagation(); setStatus('idle'); }} className="btn-glass" style={{ marginTop: 24 }}>Tentar Novamente</button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
