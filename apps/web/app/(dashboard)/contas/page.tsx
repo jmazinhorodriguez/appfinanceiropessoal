@@ -64,13 +64,13 @@ export default function ContasPage() {
     formData.append('fileType', ext || '');
 
     try {
-      const res = await fetch('/api/contas/upload-statement', {
+      const res = await fetch('/api/import-statement', {
         method: 'POST',
         body: formData
       });
       
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || 'Erro ao importar Extrato');
 
       setStatus('processing');
       setUploadId(data.uploadId);
