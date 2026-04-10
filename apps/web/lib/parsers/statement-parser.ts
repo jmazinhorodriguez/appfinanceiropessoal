@@ -31,7 +31,14 @@ export async function parseStatement(buffer: Buffer, fileType: string): Promise<
 }
 
 function parseCSVContent(buffer: Buffer): ParsedTransaction[] {
-  const records = parseCSV(buffer, { columns: true, skip_empty_lines: true }) as CSVRow[];
+  const records = parseCSV(buffer, { 
+    columns: true, 
+    skip_empty_lines: true,
+    relax_column_count: true,
+    trim: true,
+    bom: true,
+    delimiter: [',', ';', '\t']
+  }) as CSVRow[];
   return records
     .map((row: CSVRow): ParsedTransaction | null => {
       const dateStr = row['Data'] ?? row['Date'] ?? row['Data Lançamento'] ?? Object.values(row)[0] ?? '';
