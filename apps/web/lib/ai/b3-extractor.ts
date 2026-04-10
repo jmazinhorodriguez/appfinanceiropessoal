@@ -3,12 +3,13 @@ import { B3Trade } from '../parsers/b3-parser';
 
 export async function parseB3WithAI(text: string): Promise<B3Trade[]> {
   try {
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!apiKey) {
       console.warn("No GEMINI key, skipping AI extraction.");
       return [];
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `

@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '');
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
+const genAI = new GoogleGenerativeAI(apiKey);
 
 export const ALLOWED_CATEGORIES = [
   'Alimentação', 'Transporte', 'Saúde', 'Educação', 
@@ -13,7 +14,7 @@ export async function categorizeBatchWithAI(descriptions: string[]): Promise<Rec
   }
 
   // Fallback se não tiver chave
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+  if (!apiKey) {
     console.warn("No GEMINI key, skipping AI category detection.");
     return descriptions.reduce((acc: any, desc: string) => {
       acc[desc] = 'Outros';
