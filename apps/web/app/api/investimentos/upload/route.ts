@@ -51,24 +51,32 @@ export async function POST(request: NextRequest) {
 
     let result = parseB3File(contentStr);
 
-    // Fallback absoluto: Se a heurística e as regexes falharem (layout exótico), usamos a IA (Gemini 2.5 Flash).
+    // Fallback absoluto: Se a heurística e as regexes falharem (layout exótico) ou se quiser achar proventos.
+    // Sempre passamos pela IA caso não haja trades encontrados (ex: planilha só de proventos)
+    let aiExtractions: any = null;
     if (result.trades.length === 0) {
-       console.log('Regex parser failed. Falling back to Gemini AI for B3 extraction...');
-       const aiTrades = await parseB3WithAI(contentStr);
-       if (aiTrades && aiTrades.length > 0) {
-         result.trades = aiTrades;
+       console.log('Regex parser failed. Falling back to Gemini AI for B3/Proventos extraction...');
+       const aiResult = await parseB3WithAI(contentStr);
+       aiExtractions = aiResult;
+       
+       if ((aiResult.trades && aiResult.trades.length > 0) || (aiResult.proventos && aiResult.proventos.length > 0)) {
+         result.trades = aiResult.trades || [];
+         (result as any).proventos = aiResult.proventos || [];
          result.errors = [];
        }
     }
 
-    if (result.errors.length > 0 && result.trades.length === 0) {
+    const trades = result.trades || [];
+    const proventos = (result as any).proventos || (aiExtractions ? aiExtractions.proventos : []);
+
+    if (result.errors.length > 0 && trades.length === 0 && proventos.length === 0) {
       return NextResponse.json({ 
         error: 'Não foi possível ler as notas de corretagem. Verifique se é um formato suportado.' 
       }, { status: 400 });
     }
 
     // Prepare inserts into `ordens` table
-    const ordensToInsert = result.trades.map((t: B3Trade) => ({
+    const ordensToInsert = trades.map((t: B3Trade) => ({
       user_id: user.id,
       ticker: t.ticker,
       tipo: t.type === 'compra' ? 'compra' : 'venda',
@@ -79,7 +87,7 @@ export async function POST(request: NextRequest) {
       corretagem: 0,
       data: t.date,
       mercado: t.market,
-      nota_corretagem: Object.keys(result.trades).length.toString() // just a placeholder for note name or size
+      nota_corretagem: Object.keys(trades).length.toString() // placeholder
     }));
 
     if (ordensToInsert.length > 0) {
@@ -90,10 +98,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Prepare inserts into `proventos` table
+    const proventosToInsert = proventos.map((p: any) => ({
+      user_id: user.id,
+      ticker: p.ticker,
+      tipo: p.tipo,
+      quantidade_custodia: p.quantidade_custodia,
+      valor_por_cota: p.valor_por_cota,
+      valor_bruto: p.valor_liquido,
+      ir_retido: 0,
+      valor_liquido: p.valor_liquido,
+      data_pagamento: p.data,
+      data_ex: p.data,
+      observacao: 'Importado por nota/planilha inteligente'
+    }));
+
+    if (proventosToInsert.length > 0) {
+      const { error: provError } = await supabase.from('proventos').insert(proventosToInsert);
+      if (provError) {
+        console.error('Insert proventos error:', provError);
+        return NextResponse.json({ error: 'Erro ao salvar proventos no banco de dados.' }, { status: 500 });
+      }
+    }
+
     return NextResponse.json({
       status: 'concluido',
-      count: ordensToInsert.length,
-      trades: ordensToInsert
+      count: ordensToInsert.length + proventosToInsert.length,
+      trades: ordensToInsert,
+      proventos: proventosToInsert
     });
 
   } catch (err: any) {
@@ -101,3 +133,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
