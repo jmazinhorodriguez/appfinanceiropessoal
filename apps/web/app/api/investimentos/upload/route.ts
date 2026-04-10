@@ -4,6 +4,7 @@ import pdfParse from 'pdf-parse';
 import * as xlsx from 'xlsx';
 import { parse as parseCSV } from 'csv-parse/sync';
 import { parseB3File, B3Trade } from '@/lib/parsers/b3-parser';
+import { parseB3WithAI } from '@/lib/ai/b3-extractor';
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +49,17 @@ export async function POST(request: NextRequest) {
       contentStr = buffer.toString('utf-8');
     }
 
-    const result = parseB3File(contentStr);
+    let result = parseB3File(contentStr);
+
+    // Fallback absoluto: Se a heurística e as regexes falharem (layout exótico), usamos a IA (Gemini 2.5 Flash).
+    if (result.trades.length === 0) {
+       console.log('Regex parser failed. Falling back to Gemini AI for B3 extraction...');
+       const aiTrades = await parseB3WithAI(contentStr);
+       if (aiTrades && aiTrades.length > 0) {
+         result.trades = aiTrades;
+         result.errors = [];
+       }
+    }
 
     if (result.errors.length > 0 && result.trades.length === 0) {
       return NextResponse.json({ 
