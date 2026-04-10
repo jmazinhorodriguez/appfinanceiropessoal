@@ -32,14 +32,13 @@ export async function POST(req: NextRequest) {
 
     // Create record
     const { data: record, error: dbError } = await supabase
-      .from('statement_uploads')
+      .from('extratos_importados')
       .insert({
         user_id: user.id,
-        account_id: accountId || null,
-        file_name: file.name,
-        file_type: fileType,
-        file_url: fileName,
-        status: 'processing'
+        conta_id: accountId || null,
+        nome_arquivo: file.name,
+        formato: fileType,
+        status: 'processando'
       })
       .select('id')
       .single();
@@ -65,29 +64,43 @@ async function processAsync(uploadId: string, userId: string, file: File, fileTy
     const descriptionsToCategorize = transactions.map(tx => tx.description);
     const aiCategories = await categorizeBatchWithAI(descriptionsToCategorize);
 
+    // Fetch categories for UUID mapping
+    const { data: dbCategories } = await supabase.from('categorias').select('id, nome');
+    const categoryMap = new Map();
+    dbCategories?.forEach(c => categoryMap.set((c.nome || '').toLowerCase(), c.id));
+
     // Categorize and enrich
-    const enrichedTxs = transactions.map(tx => ({
-      ...tx,
-      category: aiCategories[tx.description] || tx.category || 'Outros',
-      user_id: userId,
-      account_id: accountId || null,
-      source: `extrato_${fileType}`
-    }));
+    const enrichedTxs = transactions.map(tx => {
+      const catName = aiCategories[tx.description] || tx.category || 'Outros';
+      const catId = categoryMap.get(catName.toLowerCase()) || null;
+      
+      return {
+        user_id: userId,
+        conta_id: accountId || null,
+        descricao: tx.description,
+        valor: tx.amount,
+        tipo: tx.type,
+        data: tx.date,
+        origem: `import_${fileType}`,
+        categoria_id: catId,
+        status: 'efetivado'
+      };
+    });
 
     if (enrichedTxs.length > 0) {
-      const { error: insertError } = await supabase.from('transactions').insert(enrichedTxs);
+      const { error: insertError } = await supabase.from('transacoes').insert(enrichedTxs);
       if (insertError) throw insertError;
     }
 
-    await supabase.from('statement_uploads').update({
-      status: 'completed',
-      transactions_imported: enrichedTxs.length
+    await supabase.from('extratos_importados').update({
+      status: 'concluido',
+      total_importadas: enrichedTxs.length
     }).eq('id', uploadId);
 
   } catch (error: any) {
-    await supabase.from('statement_uploads').update({
-      status: 'error',
-      error_message: error.message
+    await supabase.from('extratos_importados').update({
+      status: 'erro',
+      erro_mensagem: error.message
     }).eq('id', uploadId);
   }
 }

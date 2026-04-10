@@ -22,12 +22,12 @@ export default function ContasPage() {
       const res = await fetch(`/api/contas/upload-status/${id}`);
       const data = await res.json();
       
-      if (data.status === 'completed') {
+      if (data.status === 'concluido') {
         setStatus('done');
-        setImportedCount(data.transactions_imported);
-      } else if (data.status === 'error') {
+        setImportedCount(data.count);
+      } else if (data.status === 'erro') {
         setStatus('error');
-        setErrorMsg(data.error_message || 'Erro ao processar arquivo.');
+        setErrorMsg(data.error || 'Erro ao processar arquivo.');
       } else {
         setTimeout(() => checkStatus(id, attempts + 1), 2000);
       }
