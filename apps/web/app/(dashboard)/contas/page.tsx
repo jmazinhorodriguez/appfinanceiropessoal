@@ -1,3 +1,4 @@
+'use client';
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, CheckCircle, XCircle, Loader2, File as FileIcon, Building2, TrendingUp, TrendingDown } from 'lucide-react';
