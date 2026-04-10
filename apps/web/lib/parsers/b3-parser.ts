@@ -107,7 +107,14 @@ export function parseB3File(content: string): B3ParseResult {
     generic:  parseGenericFormat,
   }[formato];
 
-  const trades = parseFn(lines, result.errors);
+  let trades = parseFn(lines, result.errors);
+  
+  // Se o parser específico falhar (por ex: XP mudou o layout do PDF), 
+  // cai no parser genérico heurístico que extrai Ticker, C/V e valores globalmente!
+  if (trades.length === 0 && formato !== 'generic') {
+     trades = parseGenericFormat(lines, result.errors);
+  }
+
   result.trades = trades;
 
   // Calcular totais
@@ -286,57 +293,78 @@ function parseGenericFormat(lines: string[], errors: string[]): B3Trade[] {
     const dateMatch = line.match(/(\d{2}\/\d{2}\/\d{4})/);
     if (dateMatch) currentDate = formatDate(dateMatch[1]);
 
-    // Detectar ticker + lado + quantidade + preço (ordem flexível)
-    const tickerMatch = line.match(/\b([A-Z]{4}\d{1,2}F?)\b/);
-    const sideMatch   = line.match(/\b(COMPRA|VENDA|compra|venda|\bC\b|\bV\b)\b/);
-    const qtyMatch    = line.match(/\b(\d{1,6})\b/);
-    const priceMatch  = line.match(/([\d.]+,\d{2})/);
+    const tickerMatch = line.match(/\b([A-Z]{3,6}\d{1,2}F?)\b/i);
+    const sideMatch   = line.match(/\b(COMPRA|VENDA|compra|venda|\bC\b|\bV\b)\b/i);
 
-    if (tickerMatch && sideMatch && qtyMatch && priceMatch) {
-      const ticker = tickerMatch[1];
+    if (tickerMatch && sideMatch) {
+      const ticker = tickerMatch[1].toUpperCase();
       const sideRaw = sideMatch[1].toUpperCase();
-      const side: 'compra' | 'venda' =
-        sideRaw === 'C' || sideRaw === 'COMPRA' ? 'compra' : 'venda';
-      const quantity = parseInt(qtyMatch[1]);
-      const unitPrice = parseBRNumber(priceMatch[1]);
-      const totalValue = quantity * unitPrice;
-      const fees = totalValue * 0.00325;
-
-      // Evitar duplicatas óbvias
-      const isDuplicate = trades.some(
-        t =>
-          t.ticker === ticker &&
-          t.quantity === quantity &&
-          Math.abs(t.unit_price - unitPrice) < 0.01
-      );
-
-      if (!isDuplicate) {
-        trades.push({
-          date: currentDate,
-          ticker,
-          type: side,
-          quantity,
-          unit_price: unitPrice,
-          total_value: parseFloat(totalValue.toFixed(2)),
-          fees: parseFloat(fees.toFixed(2)),
-          net_value: parseFloat(
-            (side === 'compra' ? totalValue + fees : totalValue - fees).toFixed(2)
-          ),
-          market: inferMarket(ticker),
+      const side: 'compra' | 'venda' = (sideRaw === 'C' || sideRaw === 'COMPRA') ? 'compra' : 'venda';
+      
+      const numMatches = line.match(/\b(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\b/g);
+      
+      if (numMatches && numMatches.length >= 2) {
+        let quantity = 0;
+        let unitPrice = 0;
+        
+        const nums = numMatches.map(n => {
+          if (n.includes(',') && n.includes('.')) {
+            const lastCommaPos = n.lastIndexOf(',');
+            const lastDotPos = n.lastIndexOf('.');
+            if (lastCommaPos > lastDotPos) {
+              return parseFloat(n.replace(/\./g, '').replace(',', '.'));
+            } else {
+              return parseFloat(n.replace(/,/g, ''));
+            }
+          } else if (n.includes(',')) {
+            return parseFloat(n.replace(/\./g, '').replace(',', '.'));
+          }
+          return parseFloat(n);
         });
+
+        // Heurística de extração
+        const validNums = nums.filter(n => !isNaN(n) && n > 0);
+        const intNums = validNums.filter(n => n % 1 === 0 && n < 1000000);
+        
+        // Quantity is usually the first integer
+        quantity = intNums[0] || validNums[0] || 0;
+        
+        // Price is typically the first number that isn't the quantity, or a decimal.
+        const remainNums = validNums.filter(n => n !== quantity);
+        unitPrice = remainNums[0] || validNums[1] || validNums[0] || 0;
+        
+        if (quantity > 0 && unitPrice > 0) {
+          const totalValue = quantity * unitPrice;
+          const fees = totalValue * 0.00325;
+          const isDuplicate = trades.some(t => t.ticker === ticker && t.quantity === quantity && Math.abs(t.unit_price - unitPrice) < 0.01);
+          
+          if (!isDuplicate) {
+            trades.push({
+              date: currentDate,
+              ticker,
+              type: side,
+              quantity,
+              unit_price: unitPrice,
+              total_value: parseFloat(totalValue.toFixed(2)),
+              fees: parseFloat(fees.toFixed(2)),
+              net_value: parseFloat((side === 'compra' ? totalValue + fees : totalValue - fees).toFixed(2)),
+              market: inferMarket(ticker),
+            });
+          }
+        }
       }
     }
   }
 
   if (trades.length === 0) {
     errors.push(
-      'Nenhum negócio identificado. Verifique o formato do arquivo. ' +
-      'Corretoras suportadas: XP, Rico, BTG, Nu Invest, Clear, Órama, Avenue (BDRs).'
+      'Nenhum negócio identificado. Verifique o padrão das colunas de Ticker, Compra/Venda, Qtde e Preço.'
     );
   }
 
   return trades;
 }
+
 
 /**
  * Converte B3Trade em formato de transação para salvar no banco
